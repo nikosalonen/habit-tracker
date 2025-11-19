@@ -601,13 +601,23 @@
                                     const cellHeight = data.cell.height;
                                     const padding = 3;
 
-                                    // Draw day number in top-left
+                                    // Check if date is before start date
+                                    const isBeforeStart =
+                                        dayData.date < settings.startDate;
+
+                                    // Draw day number in top-right
                                     doc.setFontSize(12);
                                     doc.setFont("helvetica", "bold");
                                     doc.setTextColor(0, 0, 0);
+                                    const dayText = dayData.day.toString();
+                                    const dayTextWidth =
+                                        doc.getTextWidth(dayText);
                                     doc.text(
-                                        dayData.day.toString(),
-                                        cellX + padding,
+                                        dayText,
+                                        cellX +
+                                            cellWidth -
+                                            padding -
+                                            dayTextWidth,
                                         cellY + padding + 4,
                                     );
 
@@ -638,35 +648,40 @@
                                         );
                                     }
 
-                                    // Draw checkbox in center-ish area
-                                    const checkboxSize = 5;
-                                    const checkboxX =
-                                        cellX +
-                                        cellWidth / 2 -
-                                        checkboxSize / 2;
-                                    const checkboxY =
-                                        cellY +
-                                        cellHeight / 2 -
-                                        checkboxSize / 2;
-                                    doc.setDrawColor(0, 0, 0);
-                                    doc.setLineWidth(0.3);
-                                    doc.rect(
-                                        checkboxX,
-                                        checkboxY,
-                                        checkboxSize,
-                                        checkboxSize,
-                                    );
+                                    // Draw checkbox on left side only if date is not before start date
+                                    if (!isBeforeStart) {
+                                        const checkboxSize = 6;
+                                        const leftMargin = 8;
+                                        const checkboxX = cellX + leftMargin;
+                                        const checkboxY =
+                                            cellY +
+                                            cellHeight / 2 -
+                                            checkboxSize / 2;
+                                        doc.setDrawColor(0, 0, 0);
+                                        doc.setLineWidth(0.3);
+                                        doc.rect(
+                                            checkboxX,
+                                            checkboxY,
+                                            checkboxSize,
+                                            checkboxSize,
+                                        );
+                                    }
 
-                                    // Draw feeling circle if enabled
-                                    if (settings.showFeelingCircles) {
-                                        const circleRadius = 4;
-                                        const circleX = cellX + cellWidth / 2;
+                                    // Draw feeling circle on left side if enabled and date is not before start date
+                                    if (
+                                        settings.showFeelingCircles &&
+                                        !isBeforeStart
+                                    ) {
+                                        const circleRadius = 4.5;
+                                        const leftMargin = 8;
+                                        const circleX =
+                                            cellX + leftMargin + circleRadius;
                                         const circleY =
                                             cellY +
                                             cellHeight -
                                             padding -
                                             circleRadius -
-                                            2;
+                                            5;
                                         doc.setDrawColor(0, 0, 0);
                                         doc.setLineWidth(0.3);
                                         doc.circle(
