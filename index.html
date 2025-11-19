@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Habit Tracker Calendar Generator</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Arial,
+                    sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 12px;
+                padding: 40px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+
+            h1 {
+                color: #333;
+                margin-bottom: 10px;
+                font-size: 28px;
+            }
+
+            .subtitle {
+                color: #666;
+                margin-bottom: 30px;
+                font-size: 14px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 6px;
+                color: #333;
+                font-weight: 500;
+                font-size: 14px;
+            }
+
+            input[type="date"],
+            input[type="text"],
+            select {
+                width: 100%;
+                padding: 10px 12px;
+                border: 2px solid #e0e0e0;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.3s;
+            }
+
+            input[type="date"]:focus,
+            input[type="text"]:focus,
+            select:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            .checkbox-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+            }
+
+            .checkbox-group label {
+                margin: 0;
+                cursor: pointer;
+                font-weight: normal;
+            }
+
+            button {
+                width: 100%;
+                padding: 14px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    transform 0.2s,
+                    box-shadow 0.2s;
+                margin-top: 10px;
+            }
+
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            }
+
+            button:active {
+                transform: translateY(0);
+            }
+
+            .error {
+                color: #e74c3c;
+                font-size: 13px;
+                margin-top: 5px;
+                display: none;
+            }
+
+            .error.show {
+                display: block;
+            }
+
+            .two-col {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }
+
+            .help-text {
+                font-size: 12px;
+                color: #888;
+                margin-top: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📅 Habit Tracker Calendar</h1>
+            <p class="subtitle">
+                Generate printable PDF calendars for your habit tracking journey
+            </p>
+
+            <form id="calendarForm">
+                <div class="two-col">
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" required />
+                        <div class="error" id="startDateError">
+                            Please select a start date
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate" required />
+                        <div class="error" id="endDateError">
+                            End date must be after start date
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="goalText">Goal / Habit</label>
+                    <input
+                        type="text"
+                        id="goalText"
+                        placeholder="e.g., 10 squats per day"
+                        maxlength="100"
+                        required
+                    />
+                    <p class="help-text">This will appear on every page</p>
+                </div>
+
+                <div class="two-col">
+                    <div class="form-group">
+                        <label for="firstDay">First Day of Week</label>
+                        <select id="firstDay">
+                            <option value="1">Monday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paperSize">Paper Size</label>
+                        <select id="paperSize">
+                            <option value="a4">A4</option>
+                            <option value="letter">US Letter</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Weekly Column Features</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="weeklyComplete" checked />
+                        <label for="weeklyComplete">☐/7 complete</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="weeklyNotes" checked />
+                        <label for="weeklyNotes">Notes field</label>
+                    </div>
+                    <p class="help-text">
+                        Select none to disable weekly column entirely
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showWeekNumbers" checked />
+                        <label for="showWeekNumbers">Show week numbers</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input
+                            type="checkbox"
+                            id="showFeelingCircles"
+                            checked
+                        />
+                        <label for="showFeelingCircles"
+                            >Show feeling circles</label
+                        >
+                    </div>
+                </div>
+
+                <button type="submit">Generate PDF Calendar</button>
+            </form>
+        </div>
+
+        <script>
+            const { jsPDF } = window.jspdf;
+
+            // Set default dates (today to 3 months from now)
+            const today = new Date();
+            const threeMonthsLater = new Date(today);
+            threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+
+            document.getElementById("startDate").valueAsDate = today;
+            document.getElementById("endDate").valueAsDate = threeMonthsLater;
+
+            // Form validation and submission
+            document
+                .getElementById("calendarForm")
+                .addEventListener("submit", (e) => {
+                    e.preventDefault();
+
+                    const startDate = new Date(
+                        document.getElementById("startDate").value,
+                    );
+                    const endDate = new Date(
+                        document.getElementById("endDate").value,
+                    );
+                    const goalText = document
+                        .getElementById("goalText")
+                        .value.trim();
+
+                    // Validation
+                    let isValid = true;
+
+                    if (!document.getElementById("startDate").value) {
+                        document
+                            .getElementById("startDateError")
+                            .classList.add("show");
+                        isValid = false;
+                    } else {
+                        document
+                            .getElementById("startDateError")
+                            .classList.remove("show");
+                    }
+
+                    if (endDate <= startDate) {
+                        document
+                            .getElementById("endDateError")
+                            .classList.add("show");
+                        isValid = false;
+                    } else {
+                        document
+                            .getElementById("endDateError")
+                            .classList.remove("show");
+                    }
+
+                    if (!isValid || !goalText) return;
+
+                    // Gather settings
+                    const settings = {
+                        startDate,
+                        endDate,
+                        goalText,
+                        firstDay: parseInt(
+                            document.getElementById("firstDay").value,
+                        ),
+                        paperSize: document.getElementById("paperSize").value,
+                        weeklyComplete:
+                            document.getElementById("weeklyComplete").checked,
+                        weeklyNotes:
+                            document.getElementById("weeklyNotes").checked,
+                        showWeekNumbers:
+                            document.getElementById("showWeekNumbers").checked,
+                        showFeelingCircles:
+                            document.getElementById("showFeelingCircles")
+                                .checked,
+                    };
+
+                    generatePDF(settings);
+                });
+
+            function generatePDF(settings) {
+                const orientation = "landscape";
+                const format = settings.paperSize === "a4" ? "a4" : "letter";
+                const doc = new jsPDF(orientation, "mm", format);
+
+                // Page dimensions
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 10;
+
+                // Generate months between start and end date
+                const months = getMonthsBetween(
+                    settings.startDate,
+                    settings.endDate,
+                );
+
+                months.forEach((monthData, index) => {
+                    if (index > 0) doc.addPage();
+                    renderMonthPage(
+                        doc,
+                        monthData,
+                        settings,
+                        pageWidth,
+                        pageHeight,
+                        margin,
+                    );
+                });
+
+                // Download PDF
+                const filename = `habit-tracker-${formatDate(settings.startDate)}-to-${formatDate(settings.endDate)}.pdf`;
+                doc.save(filename);
+            }
+
+            function getMonthsBetween(start, end) {
+                const months = [];
+                const current = new Date(
+                    start.getFullYear(),
+                    start.getMonth(),
+                    1,
+                );
+                const endDate = new Date(end.getFullYear(), end.getMonth(), 1);
+
+                while (current <= endDate) {
+                    months.push({
+                        year: current.getFullYear(),
+                        month: current.getMonth(),
+                    });
+                    current.setMonth(current.getMonth() + 1);
+                }
+
+                return months;
+            }
+
+            function renderMonthPage(
+                doc,
+                monthData,
+                settings,
+                pageWidth,
+                pageHeight,
+                margin,
+            ) {
+                const { year, month } = monthData;
+                const monthName = new Date(year, month, 1).toLocaleString(
+                    "en-US",
+                    { month: "long" },
+                );
+
+                // Header
+                doc.setFontSize(18);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${monthName} ${year}`, margin, margin + 7);
+
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "normal");
+                const goalWidth = doc.getTextWidth(
+                    `Goal: ${settings.goalText}`,
+                );
+                doc.text(
+                    `Goal: ${settings.goalText}`,
+                    pageWidth - margin - goalWidth,
+                    margin + 7,
+                );
+
+                // Calculate calendar grid
+                const calendarTop = margin + 15;
+                const calendarHeight = pageHeight - calendarTop - margin;
+
+                const calendar = generateCalendarData(year, month, settings);
+                renderCalendarTable(
+                    doc,
+                    calendar,
+                    settings,
+                    margin,
+                    calendarTop,
+                    pageWidth - 2 * margin,
+                    calendarHeight,
+                );
+            }
+
+            function generateCalendarData(year, month, settings) {
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+
+                // Calculate starting day offset
+                let startDayOfWeek = firstDay.getDay();
+                if (settings.firstDay === 1) {
+                    // Monday as first day
+                    startDayOfWeek =
+                        startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+                }
+
+                const weeks = [];
+                let currentWeek = [];
+
+                // Fill first week with empty days
+                for (let i = 0; i < startDayOfWeek; i++) {
+                    currentWeek.push(null);
+                }
+
+                // Fill in the days
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, month, day);
+                    const isStart = isSameDay(date, settings.startDate);
+                    const isEnd = isSameDay(date, settings.endDate);
+
+                    currentWeek.push({
+                        day,
+                        date,
+                        isStart,
+                        isEnd,
+                    });
+
+                    if (currentWeek.length === 7) {
+                        weeks.push(currentWeek);
+                        currentWeek = [];
+                    }
+                }
+
+                // Fill last week with empty days
+                if (currentWeek.length > 0) {
+                    while (currentWeek.length < 7) {
+                        currentWeek.push(null);
+                    }
+                    weeks.push(currentWeek);
+                }
+
+                return { weeks, year, month };
+            }
+
+            function renderCalendarTable(
+                doc,
+                calendar,
+                settings,
+                x,
+                y,
+                width,
+                height,
+            ) {
+                const dayNames =
+                    settings.firstDay === 1
+                        ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                        : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+                const hasWeeklyColumn =
+                    settings.weeklyComplete || settings.weeklyNotes;
+
+                // Build header row
+                let headers = [];
+                if (settings.showWeekNumbers) {
+                    headers.push("Wk");
+                }
+                headers = headers.concat(dayNames);
+                if (hasWeeklyColumn) {
+                    headers.push("Weekly");
+                }
+
+                // Build data rows
+                const rows = calendar.weeks.map((week, weekIndex) => {
+                    const row = [];
+
+                    if (settings.showWeekNumbers) {
+                        const weekNum = getWeekNumber(
+                            calendar.year,
+                            calendar.month,
+                            weekIndex,
+                        );
+                        row.push(weekNum.toString());
+                    }
+
+                    week.forEach((dayData) => {
+                        if (dayData === null) {
+                            row.push("");
+                        } else {
+                            let cellContent = dayData.day.toString();
+                            if (dayData.isStart) cellContent += "\nSTART";
+                            if (dayData.isEnd) cellContent += "\nFINISH";
+                            row.push(cellContent);
+                        }
+                    });
+
+                    if (hasWeeklyColumn) {
+                        let weeklyContent = "";
+                        if (settings.weeklyComplete) {
+                            weeklyContent = "☐/7";
+                        }
+                        // Notes field is just empty space, handled by the cell itself
+                        row.push(weeklyContent);
+                    }
+
+                    return row;
+                });
+
+                // Column widths
+                const weekColWidth = settings.showWeekNumbers ? 8 : 0;
+                const weeklyColWidth = hasWeeklyColumn ? 30 : 0;
+                const remainingWidth = width - weekColWidth - weeklyColWidth;
+                const dayColWidth = remainingWidth / 7;
+
+                const colWidths = [];
+                if (settings.showWeekNumbers) colWidths.push(weekColWidth);
+                for (let i = 0; i < 7; i++) colWidths.push(dayColWidth);
+                if (hasWeeklyColumn) colWidths.push(weeklyColWidth);
+
+                // Calculate row height
+                const rowHeight = height / (calendar.weeks.length + 1); // +1 for header
+
+                doc.autoTable({
+                    head: [headers],
+                    body: rows,
+                    startY: y,
+                    margin: { left: x, right: x },
+                    tableWidth: width,
+                    columnStyles: colWidths.reduce((acc, width, i) => {
+                        acc[i] = { cellWidth: width };
+                        return acc;
+                    }, {}),
+                    styles: {
+                        fontSize: 10,
+                        cellPadding: 2,
+                        valign: "middle",
+                        halign: "center",
+                        minCellHeight: rowHeight,
+                        lineWidth: 0.2,
+                    },
+                    headStyles: {
+                        fillColor: [240, 240, 240],
+                        textColor: [0, 0, 0],
+                        fontStyle: "bold",
+                        minCellHeight: 8,
+                    },
+                    didDrawCell: (data) => {
+                        // Draw checkbox and feeling circle in day cells
+                        if (data.section === "body" && data.row.index >= 0) {
+                            const colOffset = settings.showWeekNumbers ? 1 : 0;
+                            const isDayCell =
+                                data.column.index >= colOffset &&
+                                data.column.index < colOffset + 7;
+
+                            if (isDayCell && data.cell.text.length > 0) {
+                                const cellX = data.cell.x;
+                                const cellY = data.cell.y;
+                                const cellWidth = data.cell.width;
+                                const cellHeight = data.cell.height;
+
+                                // Draw checkbox
+                                const checkboxSize = 4;
+                                const checkboxX =
+                                    cellX + cellWidth / 2 - checkboxSize / 2;
+                                const checkboxY = cellY + cellHeight * 0.5;
+                                doc.rect(
+                                    checkboxX,
+                                    checkboxY,
+                                    checkboxSize,
+                                    checkboxSize,
+                                );
+
+                                // Draw feeling circle if enabled
+                                if (settings.showFeelingCircles) {
+                                    const circleRadius = 3;
+                                    const circleX = cellX + cellWidth / 2;
+                                    const circleY = cellY + cellHeight * 0.75;
+                                    doc.circle(circleX, circleY, circleRadius);
+                                }
+                            }
+                        }
+                    },
+                });
+            }
+
+            function getWeekNumber(year, month, weekIndex) {
+                const date = new Date(year, month, 1 + weekIndex * 7);
+                const dayNum = date.getDay() || 7;
+                date.setDate(date.getDate() + 4 - dayNum);
+                const yearStart = new Date(date.getFullYear(), 0, 1);
+                return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+            }
+
+            function isSameDay(date1, date2) {
+                return (
+                    date1.getFullYear() === date2.getFullYear() &&
+                    date1.getMonth() === date2.getMonth() &&
+                    date1.getDate() === date2.getDate()
+                );
+            }
+
+            function formatDate(date) {
+                return date.toISOString().split("T")[0];
+            }
+        </script>
+    </body>
+</html>
