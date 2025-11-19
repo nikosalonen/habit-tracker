@@ -487,45 +487,33 @@
                     headers.push("Weekly");
                 }
 
-                // Build data rows
-                const rows = calendar.weeks.map((week, weekIndex) => {
+                // Build data rows - store day data for custom rendering
+                const rowsData = calendar.weeks.map((week, weekIndex) => {
+                    return {
+                        week,
+                        weekIndex,
+                        weekNum: settings.showWeekNumbers
+                            ? getWeekNumber(
+                                  calendar.year,
+                                  calendar.month,
+                                  weekIndex,
+                              )
+                            : null,
+                    };
+                });
+
+                // Create empty rows for autoTable (we'll draw content manually)
+                const rows = rowsData.map(() => {
                     const row = [];
-
-                    if (settings.showWeekNumbers) {
-                        const weekNum = getWeekNumber(
-                            calendar.year,
-                            calendar.month,
-                            weekIndex,
-                        );
-                        row.push(weekNum.toString());
-                    }
-
-                    week.forEach((dayData) => {
-                        if (dayData === null) {
-                            row.push("");
-                        } else {
-                            let cellContent = dayData.day.toString();
-                            if (dayData.isStart) cellContent += "\nSTART";
-                            if (dayData.isEnd) cellContent += "\nFINISH";
-                            row.push(cellContent);
-                        }
-                    });
-
-                    if (hasWeeklyColumn) {
-                        let weeklyContent = "";
-                        if (settings.weeklyComplete) {
-                            weeklyContent = "☐/7";
-                        }
-                        // Notes field is just empty space, handled by the cell itself
-                        row.push(weeklyContent);
-                    }
-
+                    if (settings.showWeekNumbers) row.push("");
+                    for (let i = 0; i < 7; i++) row.push("");
+                    if (hasWeeklyColumn) row.push("");
                     return row;
                 });
 
                 // Column widths
-                const weekColWidth = settings.showWeekNumbers ? 8 : 0;
-                const weeklyColWidth = hasWeeklyColumn ? 30 : 0;
+                const weekColWidth = settings.showWeekNumbers ? 10 : 0;
+                const weeklyColWidth = hasWeeklyColumn ? 35 : 0;
                 const remainingWidth = width - weekColWidth - weeklyColWidth;
                 const dayColWidth = remainingWidth / 7;
 
@@ -534,8 +522,11 @@
                 for (let i = 0; i < 7; i++) colWidths.push(dayColWidth);
                 if (hasWeeklyColumn) colWidths.push(weeklyColWidth);
 
-                // Calculate row height
-                const rowHeight = height / (calendar.weeks.length + 1); // +1 for header
+                // Calculate row height - make rows taller for better usability
+                const rowHeight = Math.max(
+                    height / (calendar.weeks.length + 1),
+                    25,
+                );
 
                 doc.autoTable({
                     head: [headers],
@@ -548,38 +539,163 @@
                         return acc;
                     }, {}),
                     styles: {
-                        fontSize: 10,
-                        cellPadding: 2,
-                        valign: "middle",
-                        halign: "center",
+                        fontSize: 9,
+                        cellPadding: 3,
+                        valign: "top",
+                        halign: "left",
                         minCellHeight: rowHeight,
-                        lineWidth: 0.2,
+                        lineWidth: 0.3,
+                        lineColor: [200, 200, 200],
                     },
                     headStyles: {
-                        fillColor: [240, 240, 240],
+                        fillColor: [220, 220, 220],
                         textColor: [0, 0, 0],
                         fontStyle: "bold",
-                        minCellHeight: 8,
+                        fontSize: 10,
+                        halign: "center",
+                        valign: "middle",
+                        minCellHeight: 10,
+                        lineWidth: 0.5,
+                        lineColor: [150, 150, 150],
                     },
                     didDrawCell: (data) => {
-                        // Draw checkbox and feeling circle in day cells
+                        // Draw week numbers
+                        if (
+                            data.section === "body" &&
+                            settings.showWeekNumbers &&
+                            data.column.index === 0
+                        ) {
+                            const rowData = rowsData[data.row.index];
+                            if (rowData && rowData.weekNum) {
+                                doc.setFontSize(9);
+                                doc.setTextColor(100, 100, 100);
+                                doc.setFont("helvetica", "normal");
+                                const textX = data.cell.x + data.cell.width / 2;
+                                const textY =
+                                    data.cell.y + data.cell.height / 2;
+                                doc.text(
+                                    rowData.weekNum.toString(),
+                                    textX,
+                                    textY,
+                                    { align: "center" },
+                                );
+                            }
+                        }
+
+                        // Draw day cells
                         if (data.section === "body" && data.row.index >= 0) {
                             const colOffset = settings.showWeekNumbers ? 1 : 0;
                             const isDayCell =
                                 data.column.index >= colOffset &&
                                 data.column.index < colOffset + 7;
 
-                            if (isDayCell && data.cell.text.length > 0) {
-                                const cellX = data.cell.x;
-                                const cellY = data.cell.y;
-                                const cellWidth = data.cell.width;
-                                const cellHeight = data.cell.height;
+                            if (isDayCell) {
+                                const dayIndex = data.column.index - colOffset;
+                                const rowData = rowsData[data.row.index];
+                                const dayData = rowData.week[dayIndex];
 
-                                // Draw checkbox
-                                const checkboxSize = 4;
-                                const checkboxX =
-                                    cellX + cellWidth / 2 - checkboxSize / 2;
-                                const checkboxY = cellY + cellHeight * 0.5;
+                                if (dayData) {
+                                    const cellX = data.cell.x;
+                                    const cellY = data.cell.y;
+                                    const cellWidth = data.cell.width;
+                                    const cellHeight = data.cell.height;
+                                    const padding = 3;
+
+                                    // Draw day number in top-left
+                                    doc.setFontSize(12);
+                                    doc.setFont("helvetica", "bold");
+                                    doc.setTextColor(0, 0, 0);
+                                    doc.text(
+                                        dayData.day.toString(),
+                                        cellX + padding,
+                                        cellY + padding + 4,
+                                    );
+
+                                    // Draw START marker in green
+                                    if (dayData.isStart) {
+                                        doc.setFontSize(8);
+                                        doc.setFont("helvetica", "bold");
+                                        doc.setTextColor(0, 150, 0);
+                                        doc.text(
+                                            "START",
+                                            cellX + padding,
+                                            cellY + padding + 10,
+                                        );
+                                    }
+
+                                    // Draw FINISH marker in red
+                                    if (dayData.isEnd) {
+                                        doc.setFontSize(8);
+                                        doc.setFont("helvetica", "bold");
+                                        doc.setTextColor(200, 0, 0);
+                                        const finishY = dayData.isStart
+                                            ? cellY + padding + 16
+                                            : cellY + padding + 10;
+                                        doc.text(
+                                            "FINISH",
+                                            cellX + padding,
+                                            finishY,
+                                        );
+                                    }
+
+                                    // Draw checkbox in center-ish area
+                                    const checkboxSize = 5;
+                                    const checkboxX =
+                                        cellX +
+                                        cellWidth / 2 -
+                                        checkboxSize / 2;
+                                    const checkboxY =
+                                        cellY +
+                                        cellHeight / 2 -
+                                        checkboxSize / 2;
+                                    doc.setDrawColor(0, 0, 0);
+                                    doc.setLineWidth(0.3);
+                                    doc.rect(
+                                        checkboxX,
+                                        checkboxY,
+                                        checkboxSize,
+                                        checkboxSize,
+                                    );
+
+                                    // Draw feeling circle if enabled
+                                    if (settings.showFeelingCircles) {
+                                        const circleRadius = 4;
+                                        const circleX = cellX + cellWidth / 2;
+                                        const circleY =
+                                            cellY +
+                                            cellHeight -
+                                            padding -
+                                            circleRadius -
+                                            2;
+                                        doc.setDrawColor(0, 0, 0);
+                                        doc.setLineWidth(0.3);
+                                        doc.circle(
+                                            circleX,
+                                            circleY,
+                                            circleRadius,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        // Draw weekly column content
+                        if (
+                            data.section === "body" &&
+                            hasWeeklyColumn &&
+                            data.column.index === data.table.columns.length - 1
+                        ) {
+                            const cellX = data.cell.x;
+                            const cellY = data.cell.y;
+                            const padding = 3;
+
+                            if (settings.weeklyComplete) {
+                                // Draw checkbox and /7 text
+                                const checkboxSize = 5;
+                                const checkboxX = cellX + padding;
+                                const checkboxY = cellY + padding + 2;
+                                doc.setDrawColor(0, 0, 0);
+                                doc.setLineWidth(0.3);
                                 doc.rect(
                                     checkboxX,
                                     checkboxY,
@@ -587,14 +703,17 @@
                                     checkboxSize,
                                 );
 
-                                // Draw feeling circle if enabled
-                                if (settings.showFeelingCircles) {
-                                    const circleRadius = 3;
-                                    const circleX = cellX + cellWidth / 2;
-                                    const circleY = cellY + cellHeight * 0.75;
-                                    doc.circle(circleX, circleY, circleRadius);
-                                }
+                                doc.setFontSize(10);
+                                doc.setFont("helvetica", "normal");
+                                doc.setTextColor(0, 0, 0);
+                                doc.text(
+                                    "/7",
+                                    checkboxX + checkboxSize + 2,
+                                    checkboxY + 4,
+                                );
                             }
+
+                            // Notes area is just empty space - the cell provides the writing area
                         }
                     },
                 });
